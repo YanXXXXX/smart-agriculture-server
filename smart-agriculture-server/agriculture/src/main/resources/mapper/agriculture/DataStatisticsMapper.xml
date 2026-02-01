@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.frog.agriculture.mapper.DataStatisticsMapper">
+    <select id="selectBaseInfo" parameterType="Long" resultType="java.util.HashMap">
+        select
+            (select if(base_area='',0,base_area) from agriculture_baseinfo where del_flag = 0 and dept_id = #{baseId}) as areaCount,
+            (select count(*) from agriculture_germplasm where del_flag = 0 and base_id = #{baseId}) as germplasmCount,
+            (select count(*) from agriculture_land where land_type = 0 and del_flag = 0 and base_id = #{baseId}) as diCount,
+            (select count(*) from agriculture_employee where del_flag = 0 and base_id = #{baseId}) as employeeCount,
+            (select count(*) from agriculture_crop_batch where del_flag = 0 and base_id = #{baseId}) as batchCount,
+            (select count(*) from agriculture_land where land_type = 1 and del_flag = 0 and base_id = #{baseId}) as pengCount,
+            (select base_img from agriculture_baseinfo where del_flag=0 and dept_id = #{baseId}) as baseImg,
+            (select base_name from agriculture_baseinfo where del_flag=0 and dept_id = #{baseId}) as baseName,
+            (select base_leader from agriculture_baseinfo where del_flag=0 and dept_id = #{baseId}) as baseLeader
+    </select>
+    <select id="selectDeviceInfo" parameterType="Long" resultType="java.util.HashMap">
+        select count(*) as value,p.product_name as name from iot_device d left join iot_product p on d.product_id = p.product_id
+        where d.base_id= #{baseId} and d.del_flag=0
+        group by p.product_id
+    </select>
+    <select id="selectDeviceAlert" parameterType="Long" resultType="java.util.HashMap">
+        select
+        count(*) as total,
+        sum(case when l.`status` = 1 then 1 else 0 end) as one,
+        sum(case when l.`status` = 2 then 1 else 0 end) as two,
+        sum(case when l.`status` = 3 then 1 else 0 end) as three
+        from iot_alert_log l left join  iot_device d on l.serial_number = d.serial_number
+        where d.base_id=#{baseId}
+    </select>
+    <select id="selectTaskInfo" parameterType="Long" resultType="java.util.HashMap">
+        select d.dict_label as name ,count(t.`status`) as value from sys_dict_data d
+        left join (select a.`status`,b.base_id from agriculture_batch_task a left join agriculture_crop_batch b on a.batch_id = b.batch_id where b.del_flag=0 and b.base_id=#{baseId}) t on t.`status` = d.dict_value
+        where d.dict_type='agriculture_batch_task_status'
+        group by d.dict_label
+        order by name
+    </select>
+    <select id="selectTaskInfoOfMine" parameterType="Long" resultType="java.util.HashMap">
+        select d.dict_label as name ,count(t.`status`) as value from sys_dict_data d
+        left join (select a.`status`,b.base_id from agriculture_batch_task a left join agriculture_crop_batch b on a.batch_id = b.batch_id where b.del_flag=0 and b.batch_head=#{batchHead}) t on t.`status` = d.dict_value
+        where d.dict_type='agriculture_batch_task_status'
+        group by d.dict_label
+        order by name
+    </select>
+    <select id="selectBatchInfo" parameterType="Long" resultType="java.util.HashMap">
+        select crop_area as 'value',batch_name as 'name' from agriculture_crop_batch where del_flag=0 and base_id=#{baseId}
+    </select>
+    <select id="selectToadyTaskCountByTaskHead" parameterType="Long" resultType="java.util.HashMap">
+        select count(1) as todayTaskCount from agriculture_batch_task a left join
+               agriculture_crop_batch b on a.batch_id = b.batch_id
+        <where>
+            <if test="batchHead != null and batchHead != ''"> and b.batch_head =#{batchHead}</if>
+            and date(a.plan_start) = curdate() and a.del_flag=0 and a.status = 0
+        </where>
+    </select>
+</mapper>

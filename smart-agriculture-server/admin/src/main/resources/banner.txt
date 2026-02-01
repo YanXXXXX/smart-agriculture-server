@@ -1,0 +1,2 @@
+青蛙农业版本: ${ruoyi.version}
+SpringBoot版本: ${spring-boot.version}
